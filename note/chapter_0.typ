@@ -1,3 +1,4 @@
+#set page(width: 8.5in, height: 11in, margin: 0.5in)
 #show table.cell.where(y: 0): strong
 #set table(
   stroke: (x, y) => if y == 0 {
@@ -92,7 +93,11 @@ A的new函数。 同时由于tokio可以支持不同的调度模型(@rt_model)�
 而cpu个数则通过 sysconf 调用获取。
 
 #image("./spawn_thread.png",width: 75%, fit:"contain")
-在这里我们可以看
+在这里我们可以看到，会去调用 `rt.inner.blocking_spawner().inner.run(id)`函数，它其实就是
+在不断的从队列中拿取所需要执行的任务。
+#figure(
+image("./thread_run.png",width: 70%) ,caption: [线程不断地从queue中取任务并调用 `task.run`执行，由于task.run的过程中不再需要使用此队列，因此使用drop函数放弃了对queue的独占]
+)
 
 
 
