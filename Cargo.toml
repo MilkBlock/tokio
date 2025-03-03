@@ -29,3 +29,7 @@ unexpected_cfgs = { level = "warn", check-cfg = [
   'cfg(tokio_taskdump)',
   'cfg(tokio_unstable)',
 ] }
+
+
+[profile.release]
+debug = true

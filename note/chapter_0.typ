@@ -41,7 +41,12 @@
 首先阅读 flamegraph 图了解大概的执行hello_world流程，可以观察到 整个程序的运行总时间被分割成了两个部分
 + hello_world
 + tokio-runtime-w
-这是因为hello_world代表main线程，而tokio-runtime-w 则是独立出去的调度线程，在这个调度线程的基础上再创建线程池，因此可以发现tokio-runtime-w中clone3 的运行次数很多。
+这是因为hello_world代表main线程，而tokio-runtime-w 则是tokio rt线程池中的线程。可以发现tokio-runtime-w中clone3 的调用时间占100%，就是因为clone3是作为线程的最后一个栈帧。
+#figure(
+  image("./clone3_call_in_rt.png"),
+  caption:[clone3作为线程的最后一个栈帧，因此在线程的整个生命周期都存在，并且负责调用exit syscall 通知操作系统回收线程]
+)
+
 
 + main函数首先调用了一次clone3生成独立的tokio-runtime调度线程
 + tokio-runtime-w调用多次clone3创建线程池
@@ -50,6 +55,8 @@
 = Concepts 
 
 == Tokio CurrentThread Runtime & MultiThread Runtime <rt_model>
+\@_tokio/src/runtime/scheduler/multi_thread/mod.rs_
+\@_tokio/src/runtime/scheduler/current_thread/mod.rs_
 存在两种Runtime 模型
 #table( columns:2,
 [Runtime],[简述],
@@ -64,7 +71,6 @@
 == Blocking Pool & Thread Pool
 
 
-
 == Builder
 \@_tokio/src/runtime/builder.rs_ \
 Builder设计模式是为了应对当 new函数中存在大量选项的情况和解耦合的考虑
@@ -72,6 +78,14 @@ Builder设计模式是为了应对当 new函数中存在大量选项的情况和
 A的new函数。 同时由于tokio可以支持不同的调度模型(@rt_model)，我们也需要考虑Builder去静态分发不同的调度模型。
 
 = Tokio Runtime Init
+为了初始化tokio，我们在helloworld 中可以看到在main函数上方加入了以下过程宏
+#image("./#tokio_main.png",width: 55%)
+按照注释的说法会在main函数中添加 runtime 的初始化函数
+
+== Create First Thread 
+使用gdb 打断点 clone3 可以捕获到第一次产生线程的过程
+#image("./first_clone3.png")
+
 
 == Thread Pool Init 
 + 初始化首先会生成 cpu个数的线程(如果没有使用环境变量指定要运行的线程数量)。
